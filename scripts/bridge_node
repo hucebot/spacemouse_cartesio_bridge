@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+from cartesian_interface.pyci_all import *
+import numpy as np
+from pynput import keyboard
+import rospy
+from sensor_msgs.msg import Joy
+import sys
+
+
+class SpacemouseCartesioBridge:
+    def __init__(self):
+        rospy.init_node("spacemouse_bridge", anonymous=True)
+
+        self.joy_topic = rospy.get_param("~joy_topic", "spacenav/joy")
+        self.tf_prefix = rospy.get_param("~tf_prefix", "ci")
+        self.deadband = rospy.get_param("~deadband", 0.4)
+        self.lin_scale = rospy.get_param("~lin_scale", 1.0)
+        self.ang_scale = rospy.get_param("~ang_scale", 1.0)
+        if not rospy.has_param("~possible_tasks"):
+            rospy.logerr("No param 'possible_tasks' defined. Shutting down.")
+            sys.exit()
+
+        rospy.loginfo("SpaceMouse-Cartesio Bridge settings:")
+        rospy.loginfo(" - joy_topic: %s", self.joy_topic)
+        rospy.loginfo(" - tf_prefix: %s", self.tf_prefix)
+        rospy.loginfo(" - deadband: %f", self.deadband)
+        rospy.loginfo(" - lin_scale: %f", self.lin_scale)
+        rospy.loginfo(" - ang_scale: %f", self.ang_scale)
+
+        try:
+            self.cli = pyci.CartesianInterfaceRos()
+        except:
+            rospy.logerr("No Cartesio server found. Shutting down.")
+            sys.exit()
+
+        try:
+            rospy.loginfo("Possible tasks:")
+            for i in range(len(self.possible_tasks)):
+                self.current_task = self.cli.getTask(self.possible_tasks[i])
+                rospy.loginfo(" %i) %s", i + 1, self.current_task.getName())
+        except:
+            rospy.logerr(
+                "No task named %s found. Shutting down.", self.possible_tasks[i]
+            )
+            sys.exit()
+
+        try:
+            rospy.wait_for_message(self.joy_topic, Joy, timeout=5)
+        except:
+            rospy.logerr("No Joy msg published in %s. Shutting down.", self.joy_topic)
+            sys.exit()
+
+        # Initialize member variables
+        self.old_buttons = (0, 0)
+        self.flag_local_ref = True
+        self.task_idx = 0
+        self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
+
+        # Initialize subscriber
+        rospy.Subscriber(self.joy_topic, Joy, self.joy_cb)
+
+        # Initialize keyboard listener
+        self.keyboard_listener = keyboard.Listener(on_press=self.on_key_press)
+        self.keyboard_listener.start()
+
+        rospy.loginfo(
+            "Controlled task: %s",
+            self.current_task.getName(),
+        )
+        rospy.loginfo(
+            "Control Mode: %s (press left button to switch)",
+            self.current_task.getControlMode(),
+        )
+        rospy.loginfo("Reference Mode: LOCAL (press right button to switch)")
+
+    def joy_cb(self, msg):
+        ref = np.array(msg.axes)
+        for k in range(6):
+            if abs(ref[k]) < self.deadband:
+                ref[k] = 0.0
+
+        if msg.buttons[0] == 1 and self.old_buttons[0] == 0:
+            rospy.loginfo("Pressed LEFT button -> change control mode")
+            if self.current_task.getControlMode() == pyci.ControlType.Position:
+                self.current_task.setControlMode(pyci.ControlType.Velocity)
+            else:
+                self.current_task.setControlMode(pyci.ControlType.Position)
+
+        if msg.buttons[1] == 1 and self.old_buttons[1] == 0:
+            rospy.loginfo("Pressed RIGHT button -> switch reference mode")
+            self.flag_local_ref = not self.flag_local_ref
+            if self.flag_local_ref:
+                rospy.loginfo("Reference mode: LOCAL (press right button to switch)")
+            else:
+                rospy.loginfo("Reference mode: GLOBAL (press right button to switch)")
+
+        self.old_buttons = msg.buttons
+
+        if self.current_task.getControlMode() == pyci.ControlType.Velocity:
+            # Send velocity references from SpaceMouse
+            if self.flag_local_ref:
+                H = self.cli.getPoseFromTf(
+                    self.tf_prefix + "/" + self.current_task.getName(),
+                    self.tf_prefix + "/" + self.current_task.getBaseLink(),
+                )
+                adj = np.block(
+                    [[H.linear, np.zeros((3, 3))], [np.zeros((3, 3)), H.linear]]
+                )
+                ref[:3] = self.lin_scale * ref[:3]
+                ref[3:] = self.ang_scale * ref[3:]
+                ref = adj @ ref
+
+            self.current_task.setVelocityReference(ref)
+
+    def on_key_press(self, key):
+        try:
+            self.task_idx += 1
+            self.task_idx %= len(self.possible_tasks)
+            self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
+            rospy.loginfo(
+                "Switched controlled task to: %s",
+                self.current_task.getName(),
+            )
+
+        except AttributeError:
+            rospy.logerr("Error reading keayboard.")
+
+
+if __name__ == "__main__":
+    sm = SpacemouseCartesioBridge()
+    rospy.spin()

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>spacemouse_cartesio_bridge</name>
+  <version>0.0.1</version>
+  <description>Bridge node for sending velocity references to CartesI/O through a SpaceMouse</description>
+
+  <maintainer email="fabio.amadio@inria.fr">Fabio Amadio</maintainer>
+
+  <license>GNUv3</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>sensor_msgs</build_export_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+</package>

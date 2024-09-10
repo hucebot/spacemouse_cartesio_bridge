@@ -1,0 +1,14 @@
+<launch>
+  <node pkg="spacenav_node" type="spacenav_node" name="$(anon spacenav_node)" output="screen">
+    <param name="zero_when_static" value="true"/>
+  </node>
+  
+  <node pkg="spacemouse_cartesio_bridge" type="bridge_node" name="$(anon spacemouse_bridge_node)" output="screen">
+    <rosparam param="tf_prefix">"ci"</rosparam>
+    <rosparam param="joy_topic">"spacenav/joy"</rosparam>
+    <rosparam param="deadband">0.4</rosparam>
+    <rosparam param="lin_scale">1.0</rosparam>
+    <rosparam param="ang_scale">1.0</rosparam>
+    <rosparam param="possible_tasks">["gripper_right_grasping_frame", "gripper_left_grasping_frame", "base_link"]</rosparam>
+  </node>
+</launch>
