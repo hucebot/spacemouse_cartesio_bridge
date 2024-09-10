@@ -20,6 +20,8 @@ class SpacemouseCartesioBridge:
         if not rospy.has_param("~possible_tasks"):
             rospy.logerr("No param 'possible_tasks' defined. Shutting down.")
             sys.exit()
+        else:
+            self.possible_tasks = rospy.get_param("~possible_tasks")
 
         rospy.loginfo("SpaceMouse-Cartesio Bridge settings:")
         rospy.loginfo(" - joy_topic: %s", self.joy_topic)
@@ -53,7 +55,7 @@ class SpacemouseCartesioBridge:
 
         # Initialize member variables
         self.old_buttons = (0, 0)
-        self.flag_local_ref = True
+        self.flag_local_ref = False
         self.task_idx = 0
         self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
 
@@ -72,28 +74,38 @@ class SpacemouseCartesioBridge:
             "Control Mode: %s (press left button to switch)",
             self.current_task.getControlMode(),
         )
-        rospy.loginfo("Reference Mode: LOCAL (press right button to switch)")
+        rospy.loginfo("Reference Mode: GLOBAL (press right button to switch)")
 
-    def joy_cb(self, msg):
+    def joy_cb(self, msg: Joy):
+        """
+        Joy topic callback.
+
+        Parameters
+        ----------
+            msg : received message
+
+        """
         ref = np.array(msg.axes)
         for k in range(6):
             if abs(ref[k]) < self.deadband:
                 ref[k] = 0.0
 
         if msg.buttons[0] == 1 and self.old_buttons[0] == 0:
-            rospy.loginfo("Pressed LEFT button -> change control mode")
             if self.current_task.getControlMode() == pyci.ControlType.Position:
                 self.current_task.setControlMode(pyci.ControlType.Velocity)
             else:
                 self.current_task.setControlMode(pyci.ControlType.Position)
 
         if msg.buttons[1] == 1 and self.old_buttons[1] == 0:
-            rospy.loginfo("Pressed RIGHT button -> switch reference mode")
             self.flag_local_ref = not self.flag_local_ref
             if self.flag_local_ref:
-                rospy.loginfo("Reference mode: LOCAL (press right button to switch)")
+                rospy.loginfo(
+                    "\nSwitched to reference mode: LOCAL (press right button to switch)"
+                )
             else:
-                rospy.loginfo("Reference mode: GLOBAL (press right button to switch)")
+                rospy.loginfo(
+                    "\nSwitched to reference mode: GLOBAL (press right button to switch)"
+                )
 
         self.old_buttons = msg.buttons
 
@@ -114,14 +126,16 @@ class SpacemouseCartesioBridge:
             self.current_task.setVelocityReference(ref)
 
     def on_key_press(self, key):
+        """Keyboard callback."""
         try:
-            self.task_idx += 1
-            self.task_idx %= len(self.possible_tasks)
-            self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
-            rospy.loginfo(
-                "Switched controlled task to: %s",
-                self.current_task.getName(),
-            )
+            if key == keyboard.Key.enter:
+                self.task_idx += 1
+                self.task_idx %= len(self.possible_tasks)
+                self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
+                rospy.loginfo(
+                    "\nSwitched controlled task to: %s",
+                    self.current_task.getName(),
+                )
 
         except AttributeError:
             rospy.logerr("Error reading keayboard.")

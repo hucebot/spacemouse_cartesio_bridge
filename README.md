@@ -43,4 +43,37 @@ Modify the parameter setting in the `start.launch` file according to your applic
 - Activate the 'Velocity Control Mode' for the selected task by pressing the left button on the SpaceMouse. NOTE: You can control the robot through the SpaceMouse only in 'Velocity Control Mode'.
 - Set the reference frame for the velocity reference to either GLOBAL ("world") or LOCAL (the controller frame) by pressing the right button on the SpaceMouse
 
-## Docker
+## Try out on Docker
+
+You can try the SpaceMouse CartesI/O bridge on a docker example with a simulated Tiago Dual (omnibase) developed by PAL Robotics (CartesI/O configuration at the link: (<https://github.com/hucebot/tiago_dual_cartesio_config>)).
+
+To build the docker image, from the **spacemouse_cartesio_bridge** folder, run:
+
+```bash
+docker build -t opensot_spacemouse .
+```
+
+To run the container, form the **spacemouse_cartesio_bridge** folder, run:
+
+```bash
+bash run_docker.sh
+```
+
+Then run:
+
+```bash
+spacenavd
+terminator
+```
+
+Inside the `terminator`, open two terminal. In one run:
+
+```bash
+roslaunch tiago_dual_cartesio_config cartesio.launch
+```
+
+And in the second, run:
+
+```bash
+roslaunch spacemouse_cartesio_bridge start.launch
+```
