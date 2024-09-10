@@ -100,11 +100,11 @@ class SpacemouseCartesioBridge:
             self.flag_local_ref = not self.flag_local_ref
             if self.flag_local_ref:
                 rospy.loginfo(
-                    "\nSwitched to reference mode: LOCAL (press right button to switch)"
+                    "Switched to reference mode: LOCAL (press right button to switch)\n"
                 )
             else:
                 rospy.loginfo(
-                    "\nSwitched to reference mode: GLOBAL (press right button to switch)"
+                    "Switched to reference mode: GLOBAL (press right button to switch)\n"
                 )
 
         self.old_buttons = msg.buttons
@@ -133,7 +133,7 @@ class SpacemouseCartesioBridge:
                 self.task_idx %= len(self.possible_tasks)
                 self.current_task = self.cli.getTask(self.possible_tasks[self.task_idx])
                 rospy.loginfo(
-                    "\nSwitched controlled task to: %s",
+                    "Switched controlled task to: %s\n",
                     self.current_task.getName(),
                 )
 
