@@ -9,8 +9,5 @@ docker run \
             --net host \
             --privileged \
             --volume /tmp/.X11-unix:/tmp/.X11-unix \
-            --name opensot \
-            --hostname opensot \
-            --add-host opensot:127.0.0.1 \
+            --name opensot_spacemouse \
             opensot_spacemouse
-            
