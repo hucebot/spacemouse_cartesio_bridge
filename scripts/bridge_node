@@ -85,11 +85,7 @@ class SpacemouseCartesioBridge:
             msg : received message
 
         """
-        ref = np.array(msg.axes)
-        for k in range(6):
-            if abs(ref[k]) < self.deadband:
-                ref[k] = 0.0
-
+        # Check buttons
         if msg.buttons[0] == 1 and self.old_buttons[0] == 0:
             if self.current_task.getControlMode() == pyci.ControlType.Position:
                 self.current_task.setControlMode(pyci.ControlType.Velocity)
@@ -106,10 +102,19 @@ class SpacemouseCartesioBridge:
                 rospy.loginfo(
                     "Switched to reference mode: GLOBAL (press right button to switch)\n"
                 )
-
         self.old_buttons = msg.buttons
 
         if self.current_task.getControlMode() == pyci.ControlType.Velocity:
+            # Apply deadband to axes
+            ref = np.array(msg.axes)
+            for k in range(6):
+                if abs(ref[k]) < self.deadband:
+                    ref[k] = 0.0
+
+            # Scale linear and angular components
+            ref[:3] = self.lin_scale * ref[:3]
+            ref[3:] = self.ang_scale * ref[3:]
+
             # Send velocity references from SpaceMouse
             if self.flag_local_ref:
                 H = self.cli.getPoseFromTf(
@@ -119,8 +124,6 @@ class SpacemouseCartesioBridge:
                 adj = np.block(
                     [[H.linear, np.zeros((3, 3))], [np.zeros((3, 3)), H.linear]]
                 )
-                ref[:3] = self.lin_scale * ref[:3]
-                ref[3:] = self.ang_scale * ref[3:]
                 ref = adj @ ref
 
             self.current_task.setVelocityReference(ref)
