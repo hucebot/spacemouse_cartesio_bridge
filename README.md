@@ -47,13 +47,13 @@ Modify the parameter setting in the `start.launch` file according to your applic
 
 You can try the SpaceMouse CartesI/O bridge on a docker example with a simulated Tiago Dual (omnibase) developed by PAL Robotics (CartesI/O configuration at the link: (<https://github.com/hucebot/tiago_dual_cartesio_config>)).
 
-To build the docker image, from the **spacemouse_cartesio_bridge** folder, run:
+To build the docker image, from the **spacemouse_cartesio_bridge/docker** folder, run:
 
 ```bash
 docker build -t opensot_spacemouse .
 ```
 
-To run the container, form the **spacemouse_cartesio_bridge** folder, run:
+To run the container, form the **spacemouse_cartesio_bridge/docker** folder, run:
 
 ```bash
 bash run_docker.sh
